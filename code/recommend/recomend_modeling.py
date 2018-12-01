@@ -19,9 +19,9 @@ import time
 def surprise_data_transform(data , scale_range = (0,1) , eval = True):
     reader = Reader(rating_scale = scale_range)
     data = Dataset.load_from_df(data[['userID', 'itemID', 'rating']], reader)
-    if eval = True:
+    if eval == True:
         return data
-    elif eval = False:
+    elif eval == False:
         train_set = data.build_full_trainset()
         return train_set
 
@@ -36,10 +36,10 @@ def recommend_model_testing(data, fold = 5, top_k = 10, n_factors = 200, n_epoch
     cv = KFold(fold)
     for i, (train_set, test_set) in tqdm(enumerate(cv.split(data))):
         model_algo.fit(trainset=train_set)
-        predictions = svd_algo.test(testset=test_set)
+        predictions = model_algo.test(testset=test_set)
 
 
-        acc[i] = surprise.accuracy.rmse(predictions=predictions, verbose=True)
+        acc[i] = accuracy.rmse(predictions=predictions, verbose=True)
         precisions, recalls  = precision_recall_at_k(predictions, k=top_k, threshold = threshold)
         total_precisions = sum(prec for prec in precisions.values()) / len(precisions)
         total_recalls = sum(rec for rec in recalls.values()) / len(recalls)
@@ -48,10 +48,10 @@ def recommend_model_testing(data, fold = 5, top_k = 10, n_factors = 200, n_epoch
 
     total_score = np.vstack((acc,recall_n, precision_n )).T
     total_score = pd.DataFrame(total_score, columns=['acc' , 'recall_' + str(top_k), 'precision_' + str(top_k) ])
-    return svd_algo, total_score
+    return model_algo, total_score
 
 def recommend_model(model,train_set):
-    model.train(trainset)
+    model.train(train_set)
     return model
 
 def get_top_n(predictions, n=10):
@@ -70,22 +70,40 @@ def recommend_predict(model,negative_set):
     return predictions
 
 def recommend_file_save(recommend_data, file_name):
-    with open(file_name, 'wb') as rec_save:
+    '''
+    recommend list to pickle file
+    '''
+    with open('{0}.pkl'.format(file_name), 'wb') as rec_save:
         pickle.dump(recommend_data, rec_save, protocol=pickle.HIGHEST_PROTOCOL)
 
+    print("recommend list save end!!!!!!")
+    print("=" * 100)
+
 def model_save(model, model_name):
-    with open(model_name, 'wb') as model_save:
+    '''
+    model file to pickle file
+    '''
+    with open('{0}.pkl'.format(model_name), 'wb') as model_save:
         pickle.dump(model, model_save, protocol=pickle.HIGHEST_PROTOCOL)
 
+    print("model save save end!!!!!!")
+    print("=" * 100)
+
 def model_score_save(score_data, file_name):
-    with open(file_name , 'a') as file_save:
+    '''
+    model score data frame to text file 
+    '''
+    with open('{0}.txt'.format(file_name) , 'ab') as file_save:
         pickle.dump(score_data, file_save, protocol=pickle.HIGHEST_PROTOCOL)
+
+    print("model score save end!!!!!!")
+    print("=" * 100)
 
 if __name__ == '__main__':
     ### compile dict
     #### this section will be rebased to args file
     preprocess_dict = {
-    'data_path' : '../',
+    'data_path' : '../../../data/inflearn_data/',
     'user_cut_off' : 20,
     'lecture_cut_off' : 10,
     'activ_value' : 1
@@ -101,10 +119,10 @@ if __name__ == '__main__':
     }
 
     saving_dict ={
-    'path':'../',
-    'model_name' : 'recommend_model_SVD'
-    'recommend_file_name' : 'recommending_file'
-    'recommend_score_name' : 'recommend_score'
+    'save_path':'../../../data/result_data/',
+    'model_name' : 'recommend_model_SVD',
+    'recommend_file_name' : 'recommending_file',
+    'recommend_score_name' : 'recommend_score',
     }
     ### modeling sector
     data_generator = DataReader()
@@ -112,7 +130,7 @@ if __name__ == '__main__':
     data = data_generator.data_preprocess(
                                     user_cut_off = preprocess_dict['user_cut_off'],
                                     lecture_cut_off =preprocess_dict['lecture_cut_off'],
-                                    active_value = preprocess_dict[activ_value''] )
+                                    active_value = preprocess_dict['activ_value'] )
     lecture_data = data_generator.lecture_data
 
     print("model testing start!!!!!!")
@@ -137,9 +155,9 @@ if __name__ == '__main__':
     top_k = get_top_n(predictions, n = model_dict['top_k'])
 
     ### save score, model and recommed dict sector
-    time = time.strftime('%x', time.localtime(time.time()))
-    model_name = "{0}_{1}".format(saving_dict['model_name'], time)
-    file_name =  "{0}_{1}_{2}".format(saving_dict['recommend_file_name'],model_dict[top_k] time)
+    time = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+    model_name = "{0}-{1}".format(saving_dict['model_name'], time)
+    file_name =  "{0}-{1}-{2}".format(saving_dict['recommend_file_name'],model_dict['top_k'], time)
     score_name =  "{0}".format(saving_dict['recommend_score_name'])
 
     time_list = list(repeat(time, model_dict['fold']))
@@ -147,7 +165,7 @@ if __name__ == '__main__':
     date_info = pd.DataFrame(time_list, columns= ['Date'])
     model_info = pd.DataFrame(model_list, columns= ['Model'])
 
-    total_score = pd.concat(['date_info', 'model_info','total_score' ] ,axis =1)
-    model_score_save(total_score,score_name )
-    recommend_file_save(top_k , file_name)
-    model_save(svd_algo, model_name)
+    total_score = pd.concat([date_info, model_info,total_score ] ,axis =1)
+    model_score_save(total_score, saving_dict['save_path'] + score_name )
+    recommend_file_save(top_k , saving_dict['save_path'] +file_name)
+    model_save(svd_algo, saving_dict['save_path'] +model_name)

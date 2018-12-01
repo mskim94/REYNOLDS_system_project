@@ -1,3 +1,4 @@
+#-*-coding: utf-8
 """
 Created on Sat Dec 01 2018
 @author: JeongChanwoo
@@ -9,6 +10,7 @@ from os import listdir
 
 class DataReader(object):
     def __init__(self):
+        self.data_path =None
         self.data_list = None
         self.total_data = None
         self.user_lecture_data = None
@@ -29,24 +31,23 @@ class DataReader(object):
         return data_list
 
 
-    def read_json(self, data_list):
+    def read_json(self, data_list, path):
         data_dict = {}
         for k in data_list:
             try:
-                data_dict[k[:-5]] = pd.read_json(path + k)
+                data_dict[k[:-5]] = pd.read_json(self.data_path + k, encoding='utf-8')
 
             except pd.errors.ParserError:
-                data_dict[k[:-5]] = pd.read_json(path + k sep = '\t')
+                data_dict[k[:-5]] = pd.read_json(self.data_path + k, sep = '\t', encoding='utf-8')
 
         return data_dict
 
 
     def total_merge(self, data_dict):
         total = None
-        data_dict = read_json()
 
-        for idx in sorted(list(data_dict.keys()):
-            total = pd.concat([total, data[idx]], axis = 0)
+        for idx in sorted(list(data_dict.keys())):
+            total = pd.concat([total, data_dict[idx]], axis = 0)
 
         total.reset_index(inplace = True)
         total.drop(['index'], axis =1, inplace = True)
@@ -56,8 +57,17 @@ class DataReader(object):
         return total
 
     def load_data(self,path):
-        data_list = self.data_list_rise(path)
-        data_dict = self.read_json(data_list)
+        '''
+        load and merge all json files related to user & lecture
+        activity
+        It's like fit method
+        데이터를 로드해서 합치는 함수 영역으로 유저가 강좌들은
+        json파일을 대상으로 한다.
+
+        '''
+        self.data_path = path
+        data_list = self.data_list_rise(self.data_path)
+        data_dict = self.read_json(data_list, self.data_path)
         self.total_merge(data_dict)
         print("data_load_complete!!!")
         print("=" * 100)
@@ -96,7 +106,7 @@ class DataReader(object):
         lecture_index = self.lecture_index
         user_index = self.user_index
 
-        print(("user_number : {0} \n
+        print(("user_number : {0}\n \
                 lecture_number : {1}").format(len(user_index), len(lecture_index)))
 
 
